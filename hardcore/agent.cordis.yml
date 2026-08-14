@@ -1,0 +1,135 @@
+# The `hardcore` agent preset: 极限模式 —— the extreme-token-economy agent.
+#
+# Design (《我的世界》极限模式隐喻 → 极致省 token):
+#   * 一条命：每次请求的 token 开销都最小化；没有试错的资本。
+#   * 工具目录最小化 —— 每次请求都会重发所有工具 schema，少一个工具就省一笔；
+#     本模式砍掉 web、skills、goals、jobs、子代理/工作流，只留干活必需的。
+#   * 输出纪律 —— 人格要求极简回复：只给结论，不给铺垫。
+#   * 更早压缩、更强裁剪 —— 上下文保持小：thresholdRatio 0.6 / retainRatio 0.12，
+#     pruner 阈值 4096 / 头 2048 / 尾 512。
+#   * 更短的 plan-mode 段落 —— 进入计划模式时注入的提示词也省。
+#
+# 保留：bash（干活）、fs / fs-search（读写检索）、str-replace-editor（定向编辑）、
+# ask-user（防走错路）、todo（防重复）、compaction + command-compact（保命）。
+# 去掉：tool-web（联网结果 token 重）、skills 目录与 skill-filesystem（目录列表
+# 每次请求都要发）、tool-goal（目标脚手架占上下文）、tool-jobs、整个 delegation
+# 组（子代理报告/工作流是 token 大户）。
+#
+# This file is an AGENT-PLANE composition. The roster mounts it ONCE under a
+# standing scope; every session naming it joins by scope parentage. The host
+# composition keeps everything a preset must not own: the registries
+# themselves, the sandbox and approval stack, persistence, and the model
+# route. A service row here MUST sit inside a group carrying an `isolate`
+# realm, or it publishes into the root realm and `dsh-agent-presets` rejects
+# the mount.
+
+# ── identity ────────────────────────────────────────────────────────────────
+
+# 极限模式的人格：极简输出纪律本身就是省 token 的最大杠杆。刻意写得很短——
+# 人格每轮请求都会重发，短人格 = 每轮都省。
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    text: |-
+      你是「极限模式」编码 Agent（{{model}}，工作目录 {{cwd}}）。目标：用最少的 token 完成任务。铁律：
+
+      1. 回复极简。只给结论与必要步骤；不要开场白、复述、叙述、装饰、客套。一句话能说清，绝不用两句。
+      2. 不重复。输出过的信息不再输出；工具已展示的内容不再转述。
+      3. 一次读够。用 offset/limit 批量读足范围，不碎片化读取。
+      4. 先想后做。动手前想清最小路径，避免试错循环：一次读对、一次改对。
+      5. 无网、无子代理。没有 web、没有子代理/工作流，一切自己来。
+      6. 上下文会被激进裁剪。关键行号/片段需要时就主动引用，别假设它还在。
+      7. 交付即成品。最终交付完整但不冗长：改动/代码给全，说明一句带过。
+
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+
+# ── shell ───────────────────────────────────────────────────────────────────
+
+# `shell-env` stays in the HOST composition; both shell tools consume the host
+# registry from here, and their executors are host-plane too.
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+
+# ── filesystem ──────────────────────────────────────────────────────────────
+
+# Both register into the host `tools` registry and provide nothing, so
+# they need no realm. The `fs` service and its policy stay in the host.
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+
+# 定向编辑：输出上限下调到 8k，进一步限制每次编辑的返回体量。
+- id: str-replace-editor
+  name: '@deepseek-ai/dsh-tool-str-replace-editor'
+  config:
+    maxOutputChars: 8000
+
+# ── plan mode ───────────────────────────────────────────────────────────────
+
+# Plan state is per-agent by nature, so an entry-local realm is the correct
+# lifetime. 段落刻意精简，进入计划模式时少注入一些 token。
+- id: planning
+  name: cordis:group
+  group: true
+  isolate:
+    planMode: true
+  config:
+    - id: plan-mode
+      name: '@deepseek-ai/dsh-plan-mode'
+      config:
+        section: |
+              You are in plan mode. Do not implement. Explore with non-mutating reads and searches to ground a decision-complete plan (goal, success criteria, changes by subsystem, edge cases, tests, assumptions). A user's conversational agreement does not end plan mode. When ready, call exit_plan_mode with the plan markdown as the only and final tool call of that response. If review rejects it, revise and present again; if review is unavailable, ask the user to switch modes manually.
+
+# ── compaction ──────────────────────────────────────────────────────────────
+
+# 更早压缩、保留更少：thresholdRatio 0.6（默认 0.8）、retainRatio 0.12（默认
+# 0.16），把稳态上下文压小；pruner 阈值下调（4096/2048/512，默认 8192/4096/
+# 1024），工具结果裁剪得更狠。`tokenMeter` 仍留在 HOST 平面。
+- id: compaction
+  name: cordis:group
+  group: true
+  isolate:
+    compaction: true
+    toolResultPruner: true
+  config:
+    - id: compaction-basic
+      name: '@deepseek-ai/dsh-compaction-basic'
+      config:
+        thresholdRatio: 0.6
+        retainRatio: 0.12
+
+    - id: command-compact
+      name: '@deepseek-ai/dsh-command-compact'
+
+    - id: tool-result-pruner
+      name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+      config:
+        thresholdChars: 4096
+        headChars: 2048
+        tailChars: 512
+
+# ── remaining model-facing rows ─────────────────────────────────────────────
+
+- id: tool-ask-user
+  name: '@deepseek-ai/dsh-tool-ask-user'
+
+- id: tool-todo
+  name: '@deepseek-ai/dsh-tool-todo'
+  config:
+    allowParallelInProgress: true
+
+# 极限模式刻意不装：tool-web、skill-filesystem / tool-skill、tool-goal、
+# tool-jobs、delegation 组（subagent / workflow / ralph）——每省一个工具，
+# 每次请求就少一段 schema。

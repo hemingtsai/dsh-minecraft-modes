@@ -17,7 +17,7 @@ const { entryListSchema } = await import(`file://${DSH_NM}/@deepseek-ai/cordis-p
 const PRESET_ID = /^[a-z0-9][a-z0-9-]*$/;
 const SKILL_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const PRESETS = ["survival", "adventure"];
+const PRESETS = ["survival", "adventure", "hardcore", "spectator"];
 
 let failures = 0;
 const fail = (msg) => { failures += 1; console.error(`  ✗ ${msg}`); };
@@ -81,12 +81,16 @@ for (const id of PRESETS) {
     fail(`preset.yml 解析失败: ${e.message}`);
   }
 
-  // 3. skills
+  // 3. skills（仅当组装声明了 customSkillDirs 时才要求 skills/ 目录存在）
+  let wantsSkills = false;
+  try {
+    wantsSkills = (await readFile(compPath, "utf8")).includes("customSkillDirs");
+  } catch { /* compPath 读取失败已在上面报过 */ }
   const skillsDir = join(dir, "skills");
   try {
     const entries = await readdir(skillsDir, { withFileTypes: true });
     const skillDirs = entries.filter((e) => e.isDirectory());
-    if (skillDirs.length === 0) fail("skills/ 下没有技能目录");
+    if (skillDirs.length === 0 && wantsSkills) fail("skills/ 下没有技能目录");
     for (const skill of skillDirs) {
       if (!SKILL_NAME.test(skill.name)) fail(`skills/${skill.name}: 目录名不符合技能命名规则`);
       const skillPath = join(skillsDir, skill.name, "SKILL.md");
@@ -116,7 +120,7 @@ for (const id of PRESETS) {
       else ok(`skills/${skill.name}: description 存在（${sdesc.slice(0, 40)}…）`);
     }
   } catch (e) {
-    if (e.code === "ENOENT") fail("缺少 skills/ 目录");
+    if (e.code === "ENOENT") { if (wantsSkills) fail("缺少 skills/ 目录"); else ok("无技能包（组装未声明 customSkillDirs，符合设计）"); }
     else fail(`skills 检查失败: ${e.message}`);
   }
 }
@@ -126,4 +130,4 @@ if (failures > 0) {
   console.error(`校验失败：${failures} 处问题`);
   process.exit(1);
 }
-console.log("全部校验通过 ✅ 两个 preset 可被 roster 发现与挂载。");
+console.log("全部校验通过 ✅ 所有 preset 均可被 roster 发现与挂载。");

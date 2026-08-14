@@ -25,7 +25,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PRESET_IDS = ["survival", "adventure"];
+const PRESET_IDS = ["survival", "adventure", "hardcore", "spectator"];
 const DSH_HOME = resolve(process.env.DSH_HOME && process.env.DSH_HOME.trim() ? process.env.DSH_HOME : join(homedir(), ".dsh"));
 const USER_PRESET_ROOT = join(DSH_HOME, ".agent-presets");
 
@@ -127,8 +127,8 @@ log("");
 if (changed === 0) {
   log("没有新增安装（均已存在）。");
 } else {
-  log("安装完成 ✅ 模式选择器现在应该显示六个模式：");
-  log("  标准模式 · PTC 模式 · 极简模式 · 创造模式 · 生存模式 · 冒险模式");
+  log("安装完成 ✅ 模式选择器现在应该显示八个模式：");
+  log("  标准模式 · PTC 模式 · 极简模式 · 创造模式 · 生存模式 · 冒险模式 · 极限模式 · 旁观模式");
   log("");
   log("无需重启服务：roster 的发现每次读取都会重新扫描磁盘。");
   log("刷新页面 / 重新打开模式选择器即可看到新的模式。");

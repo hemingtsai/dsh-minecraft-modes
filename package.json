@@ -1,7 +1,7 @@
 {
   "name": "dsh-minecraft-modes",
   "version": "0.1.0",
-  "description": "DeepSeek Harness 插件：新增「生存模式」与「冒险模式」两个 agent preset，把四个模式扩成六个模式（标准 · PTC · 极简 · 创造 · 生存 · 冒险）。",
+  "description": "DeepSeek Harness 插件：新增「生存/冒险/极限/旁观」四个 Agent preset，把四个官方模式扩成八个（标准 · PTC · 极简 · 创造 · 生存 · 冒险 · 极限 · 旁观）。",
   "private": true,
   "type": "module",
   "keywords": [
