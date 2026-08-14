@@ -1,5 +1,7 @@
 # dsh-minecraft-modes
 
+[![GitHub](https://img.shields.io/badge/GitHub-hemingtsai%2Fdsh--minecraft--modes-181717?logo=github)](https://github.com/hemingtsai/dsh-minecraft-modes)
+
 DeepSeek Harness（dsh）插件：新增 **生存模式（Survival Mode）** 与 **冒险模式（Adventure Mode）** 两个 Agent preset，把 Harness 自带的四个模式扩成**六个模式**。
 
 > 在 Harness 里，「模式」就是 Agent preset —— 每份 `agent.cordis.yml` 定义了一个会话的模型面向能力（工具、人格、提示词段落、技能包）。本插件用与官方 preset 完全相同的机制交付两个新模式，不修改任何官方文件。
