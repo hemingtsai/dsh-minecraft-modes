@@ -2,20 +2,21 @@
 /**
  * dsh-minecraft-modes 安装/卸载脚本
  *
- * 把本插件携带的两个 agent preset（survival 生存模式 / adventure 冒险模式）
- * 安装到 DeepSeek Harness 的用户 preset 根目录，使模式选择器从四个模式
- * 变成六个模式。
+ * 把本插件携带的四个 agent preset（survival 生存模式 / adventure 冒险模式 /
+ * hardcore 极限模式 / spectator 旁观模式）安装到 DeepSeek Harness 的用户
+ * preset 根目录，使模式选择器从四个模式变成八个模式。
  *
  * 用法：
  *   node install.mjs             # 安装（已存在则跳过，除非 --force）
  *   node install.mjs --force     # 安装并覆盖已存在的同名 preset
- *   node install.mjs --remove    # 卸载两个 preset
+ *   node install.mjs --remove    # 卸载四个 preset
  *   node install.mjs --list      # 显示当前已安装情况
  *
  * 说明：
  *   - 目标根目录 = $DSH_HOME/.agent-presets （默认 ~/.dsh/.agent-presets）
- *   - 安装是整目录复制（composition + preset.yml + skills），与 roster 的
- *     copy() 行为一致：绝不静默覆盖，目录权限收紧为仅属主可用。
+ *   - 安装是整目录复制（composition + preset.yml + skills），绝不静默覆盖，
+ *     目录权限收紧为仅属主可用。与 roster 的 copy() 不同，这里刻意**保留**
+ *     preset.yml 的 name 与 order（order: 5–8 让新模式按序排在官方模式之后）。
  *   - 无需重启：roster 的发现每次 list() 都会重新读盘，装完刷新页面即可
  *     在模式选择器看到新的模式。
  */
@@ -113,7 +114,7 @@ if (remove) {
   log("卸载中…");
   for (const id of PRESET_IDS) await removePreset(id);
   log("");
-  log("卸载完成。已加入这两个模式的会话仍会运行其已挂载的组装；新建会话将不再看到它们。");
+  log("卸载完成。已加入这四个模式的会话仍会运行其已挂载的组装；新建会话将不再看到它们。");
   process.exit(0);
 }
 

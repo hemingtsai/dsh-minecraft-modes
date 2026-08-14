@@ -16,7 +16,8 @@
   "scripts": {
     "install:modes": "node install.mjs",
     "uninstall:modes": "node install.mjs --remove",
-    "check": "node install.mjs --list"
+    "check": "node install.mjs --list",
+    "validate": "node scripts/validate.mjs"
   },
   "engines": {
     "node": ">=18"

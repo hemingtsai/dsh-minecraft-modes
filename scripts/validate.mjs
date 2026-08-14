@@ -1,16 +1,35 @@
 /**
  * 校验脚本（开发期工具，不属于插件本体）：
- * 用与 dsh roster 相同的规则检查本插件的两个 preset：
+ * 用与 dsh roster 相同的规则检查本插件的四个 preset：
  *   1. agent.cordis.yml 能被 entryListSchema（含 !!js）解析且行结构合法
  *   2. preset.yml 元信息可读（name/description/order）
  *   3. skills/<name>/SKILL.md frontmatter 合法（name + description，名称符合
- *      ^[a-z0-9]+(?:-[a-z0-9]+)*$）
- * 通过则打印 "OK"，任一失败则非零退出。
+ *      ^[a-z0-9]+(?:-[a-z0-9]+)*$；仅当组装声明了 customSkillDirs 时要求）
+ *
+ * 依赖 Harness 的 node_modules 来解析 entryListSchema。解析顺序：
+ *   1. 环境变量 DSH_NM（显式指定 Harness node_modules 的绝对路径）
+ *   2. PATH 上的 `dsh` 可执行文件（其 .bin 的上一级即 node_modules 根）
+ * 两者都找不到时给出清晰报错退出。
  */
-import { readFile, readdir } from "node:fs/promises";
-import { join, dirname } from "node:path";
+import { access, readFile, readdir } from "node:fs/promises";
+import { dirname, join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-const DSH_NM = process.env.DSH_NM ?? "/Users/hemingtsai/.npm/_npx/1e7f6d9597241db0/node_modules";
+
+async function findHarnessNodeModules() {
+  if (process.env.DSH_NM && process.env.DSH_NM.trim()) return process.env.DSH_NM.trim();
+  const candidates = (process.env.PATH ?? "").split(sep === "/" ? ":" : ";").map((dir) => join(dir, "dsh"));
+  for (const bin of candidates) {
+    try {
+      await access(bin);
+      // 符号链接无关紧要：.bin 的上一级就是 node_modules 根
+      return join(dirname(bin), "..");
+    } catch { /* 该 PATH 项没有 dsh，继续 */ }
+  }
+  throw new Error(
+    "找不到 DeepSeek Harness 的 node_modules：请设置环境变量 DSH_NM 指向它（例如 DSH_NM=/path/to/harness/node_modules），或把 `dsh` 加入 PATH。"
+  );
+}
+const DSH_NM = await findHarnessNodeModules();
 const yaml = (await import(`file://${DSH_NM}/js-yaml/index.js`)).default;
 const { entryListSchema } = await import(`file://${DSH_NM}/@deepseek-ai/cordis-plugin-include/lib/index.js`);
 

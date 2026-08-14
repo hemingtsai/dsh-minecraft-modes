@@ -9,11 +9,12 @@
 #     pruner 阈值 4096 / 头 2048 / 尾 512。
 #   * 更短的 plan-mode 段落 —— 进入计划模式时注入的提示词也省。
 #
-# 保留：bash（干活）、fs / fs-search（读写检索）、str-replace-editor（定向编辑）、
-# ask-user（防走错路）、todo（防重复）、compaction + command-compact（保命）。
-# 去掉：tool-web（联网结果 token 重）、skills 目录与 skill-filesystem（目录列表
-# 每次请求都要发）、tool-goal（目标脚手架占上下文）、tool-jobs、整个 delegation
-# 组（子代理报告/工作流是 token 大户）。
+# 保留：bash（干活）、fs / fs-search（读写检索）、ask-user（防走错路）、
+# todo（防重复）、compaction + command-compact（保命）。
+# 去掉：str-replace-editor（tool-fs 套件已含 read/write/edit，edit 即定向编辑，
+# 再装一个编辑工具 = 每次请求多一份冗余 schema）、tool-web（联网结果 token 重）、
+# skills 目录与 skill-filesystem（目录列表每次请求都要发）、tool-goal（目标脚手
+# 架占上下文）、tool-jobs、整个 delegation 组（子代理报告/工作流是 token 大户）。
 #
 # This file is an AGENT-PLANE composition. The roster mounts it ONCE under a
 # standing scope; every session naming it joins by scope parentage. The host
@@ -69,12 +70,6 @@
   name: '@deepseek-ai/dsh-tool-fs-search'
   config:
     sampleOverCapGlobResults: false
-
-# 定向编辑：输出上限下调到 8k，进一步限制每次编辑的返回体量。
-- id: str-replace-editor
-  name: '@deepseek-ai/dsh-tool-str-replace-editor'
-  config:
-    maxOutputChars: 8000
 
 # ── plan mode ───────────────────────────────────────────────────────────────
 

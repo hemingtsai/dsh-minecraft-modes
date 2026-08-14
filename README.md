@@ -63,12 +63,13 @@ DeepSeek Harness（dsh）插件：新增 **生存模式（Survival）**、**冒�
 
 ### 旁观模式 `spectator`
 
+> ⚠️ **软只读，非沙箱强制。** 「旁观 = 只读」由人格与 `review-only` 技能约束，模型仍持有 `fs` 套件里的 `write`/`edit` 工具（该套件无法按行拆开）；需要**硬性只读**时，请在会话内把沙箱模式切到 `read-only`（会话级覆盖机制，preset 无法强制）。
+
 隐喻《我的世界》旁观模式（穿过一切方块、无法与世界交互），落地为**仅审查的只读 Agent**：
 
 - **能力边界从工具目录上砍掉**，而不是靠人格自律：无 Shell（bash/pwsh）——没有命令执行入口，杜绝 git/构建/脚本副作用；无 `str-replace-editor`；无子代理/工作流/ralph（子代理经 `composeFrom` 继承父组装，同样没有执行能力）；无 plan mode（审查产出的是报告，不是实施计划）。
 - **只读审查纪律** —— 人格 + `review-only` 技能把 fs 套件里的 write/edit 定为禁区；产出证据驱动的分级报告（问题定位到文件+行号、区分事实/推断/风险、Blocking/Major/Minor）。
 - **web 搜索保留**（查文档辅助审查），fetch 关闭。
-- 需要**硬性只读**时：在会话内把沙箱模式切到 `read-only`（会话级覆盖机制，preset 无法强制，但人格会提示你这么做）。
 
 随包技能（`spectator/skills/`）：`review-only`（只读边界）、`code-review-report`（结构化审查报告）。
 
@@ -98,7 +99,7 @@ node install.mjs --list    # 查看安装状态
 - Harness 的 Agent preset 机制：每个会话从一个 preset 组装模型面向能力；preset 目录含 `agent.cordis.yml`（组装）、可选 `preset.yml`（展示元信息）、可选 `skills/`（随包技能）。
 - 官方四个 preset 位于安装目录 `config/agent-presets/`（只读、随升级覆盖）；用户自建 preset 位于 `$DSH_HOME/.agent-presets/`，roster 自动发现，**永不写入官方目录**。
 - 本插件的四个 preset 使用官方机制：行内包名（`@deepseek-ai/dsh-*`）从宿主组装解析，技能目录用 `baseUrl` 相对本目录解析，因此**整个目录可整体迁移**（复制到别的机器、别的 DSH_HOME 都成立）。
-- 各 `preset.yml` 携带 `order: 5–8`，让四个新模式依次排在四个官方模式之后。
+- 排序：官方 preset 根目录在前、用户 preset 根目录在后，**用户根整体排在官方根之后**；`preset.yml` 的 `order: 5–8` 决定四个新模式在用户根内部（及彼此之间）的相对顺序。
 
 ## 自定义
 
@@ -111,8 +112,8 @@ node install.mjs --list    # 查看安装状态
 
 ## 已知限制
 
-- 已加入某模式的会话保持其挂载的组装不变；新选择/新建会话才用新配置。
-- 技能代际以 `agent.cordis.yml` 的 mtime/size 为键：只改 `skills/` 下的文件，需要再触碰一次组装文件（或重启）才会被新会话拾取。
+- 已加入某模式的会话保持其挂载的组装不变；新选择/新建会话才用新配置。组装文件的代际以 `agent.cordis.yml` 的 mtime/size 为键——只编辑**技能文件**（`skills/` 下的 SKILL.md）会被技能目录的 watcher 实时拾取，无需触碰组装文件；但**组装文件本身**的改动只对之后创建/加入的会话生效（运行中的会话保持其启动时的组装）。
+- 旁观模式的只读是人格级软约束（见上文「软只读」标注），非沙箱强制。
 
 ## 许可证
 
