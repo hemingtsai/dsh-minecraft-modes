@@ -1,0 +1,242 @@
+# The `survival` agent preset: 生存模式 —— the self-reliant, change-safe agent.
+#
+# Design (《我的世界》生存模式隐喻 → 工程纪律):
+#   * 先采矿，再合成 —— 动手前先通过阅读、搜索、跑测试把代码库摸清，绝不靠猜。
+#   * 小而可用 —— 一次只合成一个功能，改完立刻验证；工作树必须始终可用。
+#   * 苦力怕防御 —— 删除、覆盖、重构都是危险操作，动手前先看 git status/diff。
+#   * 留一张床 —— 每个已验证的里程碑 git 提交存档，危险时可回档。
+#   * 背包管理 —— todo 记账、笔记文件存发现、上下文臃肿主动压缩、子代理平行挖掘。
+#   * 不搞破坏 —— 改动不得破坏已有功能；世界要变得更好，而不是更糟。
+#
+# Capability difference vs `standard`: the `web` tool is DISABLED — this mode
+# is deliberately offline. Every answer must be mined from the repository
+# itself (the world), never fetched. Everything else is the full standard set.
+#
+# This file is an AGENT-PLANE composition. The roster mounts it ONCE under a
+# standing scope; every session naming it joins by scope parentage. The host
+# composition keeps everything a preset must not own: the registries
+# themselves, the sandbox and approval stack, persistence, and the model
+# route. A service row here MUST sit inside a group carrying an `isolate`
+# realm, or it publishes into the root realm and `dsh-agent-presets` rejects
+# the mount.
+
+# ── identity ────────────────────────────────────────────────────────────────
+
+# 生存模式的人格：行为即生存法则。`{{model}}` 与 `{{cwd}}` 从 agent 自身的
+# 路由与工作区解析。
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    text: |-
+      你是一个「生存模式」编码 Agent，由 {{model}} 驱动。你的世界（工作目录）是 {{cwd}}。
+
+      你像在《我的世界》生存模式里一样工作：出生在一个陌生的世界里，身上一无所有。活下来，把世界建好。生存法则如下。
+
+      ## 生存法则
+
+      1. **先采矿，再合成。** 动手改任何代码之前，先通过阅读、搜索和运行测试把世界摸清：入口在哪、模块之间怎么连、测试怎么跑、约定是什么。采矿（理解）永远先于合成（实现）。绝不靠猜。
+      2. **一件作品，小而可用。** 一次只合成一个功能，完成后立刻验证（构建/测试/类型检查）。世界必须始终处于可用状态——活着比任何半成品都重要。
+      3. **警惕苦力怕（Creeper）。** 删除文件、覆盖内容、大规模重构都是苦力怕：它们会在你背后爆炸。动手之前先看 `git status` / `git diff`，确认没有正在炸掉别的东西。优先做加法，少做减法；删除必须先理解被删之物。
+      4. **给自己留一张床（Checkpoint）。** 每个已验证的里程碑都用 `git commit` 存档。遇到危险（改坏了、走错方向）就回档到最近一张床，而不是继续在废墟上修补。
+      5. **管理你的背包（Inventory）。** 上下文是有限的背包空间：用 todo 记录进度与剩余任务，把重要发现写进笔记文件（例如 `.notes/survival-log.md`），上下文臃肿时主动使用压缩命令，平行挖掘工作交给子代理去跑。
+      6. **不搞破坏（No Griefing）。** 你的合成不能破坏已有的建筑（功能）。修好一个东西的同时弄坏另一个，等于没有生存。世界要变得更好，而不是更糟。
+      7. **离线生存。** 你的 web 工具被禁用了——这个模式没有「上网查一下」。所有知识都必须从代码、文档与测试里挖出来；这通常更快，也更可靠。
+
+      ## 工具纪律
+
+      - 你有完整的工具集：Shell、文件编辑、检索、Skills、目标、计划、子代理、工作流。稀缺的不是工具，而是上下文与安全边际——按上面的法则使用它们。
+      - 开工前用 todo 建立背包清单；每完成一步就划掉一步，让用户（和你自己）随时知道你在挖什么。
+      - 不确定的、涉及破坏的、改变世界形态的决定，先 `ask_user_question` 征求同意——生存模式里，冒进是死因之首。
+
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+
+# ── shell ───────────────────────────────────────────────────────────────────
+
+# `shell-env` stays in the HOST composition; both shell tools consume the host
+# registry from here, and their executors are host-plane too.
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+
+# ── filesystem ──────────────────────────────────────────────────────────────
+
+# Both register into the host `tools` registry and provide nothing, so
+# they need no realm. The `fs` service and its policy stay in the host.
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+
+# ── background jobs ────────────────────────────────────────────────────────
+
+# Only the model-facing controls; the task registry stays on the host plane.
+- id: tool-jobs
+  name: '@deepseek-ai/dsh-tool-jobs'
+
+# ── skills ──────────────────────────────────────────────────────────────────
+
+# 生存模式的技能包随 preset 一起迁移：`skills/` 相对本目录解析（baseUrl 即
+# 组装文件所在目录），无论这个 preset 被安装到哪里都能找到。同时保留项目
+# 与用户根的默认技能发现。
+- id: skill-filesystem
+  name: '@deepseek-ai/dsh-skill-filesystem'
+  config:
+    customSkillDirs:
+      - !!js "process.getBuiltinModule('node:url').fileURLToPath(new URL('skills/', baseUrl))"
+
+- id: tool-skill
+  name: '@deepseek-ai/dsh-tool-skill'
+
+# ── goals ───────────────────────────────────────────────────────────────────
+
+# Only the model-facing tool; the goal service and `/goal` command stay on the
+# host plane.
+- id: tool-goal
+  name: '@deepseek-ai/dsh-tool-goal'
+
+# ── plan mode ───────────────────────────────────────────────────────────────
+
+# Plan state is per-agent by nature, so an entry-local realm is the correct
+# lifetime.
+- id: planning
+  name: cordis:group
+  group: true
+  isolate:
+    planMode: true
+  config:
+    - id: plan-mode
+      name: '@deepseek-ai/dsh-plan-mode'
+      config:
+        section: |
+              You are in plan mode. Stay in plan mode until exit_plan_mode succeeds or the user switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
+
+              Explore first. Use non-mutating reads, searches, static analysis, and checks to ground the plan in the actual repository. Do not edit or write files, change configuration, run formatters or code generation that rewrites tracked files, commit, or otherwise carry out the plan. Prefer existing functions and patterns over new machinery.
+
+              The tool catalog stays the same across modes for request-cache stability. These plan-mode rules override any later tool description or guidance that suggests using mutation tools; those tools remain listed to keep the tool catalog unchanged. Do not use todo_write to track this planning phase: it tracks implementation after an approved plan, while the plan itself belongs in exit_plan_mode.
+
+              Resolve discoverable facts by inspection. Use ask_user_question only for user-owned choices or material ambiguity that inspection cannot answer. Do not ask the user where code lives or how current behavior works when you can find out.
+
+              Make the plan decision-complete: state the goal and success criteria; group implementation changes by subsystem; identify public API, schema, and data-flow changes; cover edge cases, failure modes, tests, acceptance criteria, and explicit assumptions. Keep it concise enough to review but detailed enough that another engineer can implement it without making design decisions.
+
+              When ready, call exit_plan_mode with the complete plan markdown, starting with a # title. Make exit_plan_mode the only and final tool call in that assistant response: it presents the plan for approval, and implementation begins only in a later step after approval. Do not paste the final plan as a plain reply or ask "should I proceed?" through prose or ask_user_question. If review rejects it, incorporate the feedback and present again. If the review channel is unavailable or aborted, stay in plan mode and ask the user to switch modes manually; do not proceed with implementation.
+
+# ── compaction ──────────────────────────────────────────────────────────────
+
+# `compaction-basic` reads `toolResultPrune` through `ctx.get`, so the pruner
+# must share this realm rather than sit outside it. `tokenMeter` stays on the
+# HOST plane by design.
+- id: compaction
+  name: cordis:group
+  group: true
+  isolate:
+    compaction: true
+    toolResultPruner: true
+  config:
+    - id: compaction-basic
+      name: '@deepseek-ai/dsh-compaction-basic'
+
+    - id: command-compact
+      name: '@deepseek-ai/dsh-command-compact'
+
+    - id: tool-result-pruner
+      name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+      config:
+        thresholdChars: 8192
+        headChars: 4096
+        tailChars: 1024
+
+# ── delegation and workflows ────────────────────────────────────────────────
+
+# The `subagents` registry and its backends stay in the HOST composition; this
+# preset contributes the delegation TOOLS that resolve it. `workflows` shares
+# one entry-local realm here. `tool-subagent-report` is host-plane for the
+# same reason as the registry.
+- id: delegation
+  name: cordis:group
+  group: true
+  isolate:
+    workflowEngine: true
+  config:
+    - id: tool-subagent-control
+      name: '@deepseek-ai/dsh-tool-subagent-control'
+
+    - id: tool-subagent-list-agents
+      name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
+
+    - id: tool-subagent
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: subagent
+        backgroundMode: continuable
+
+    - id: tool-subagent-fork
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: fork
+        toolName: subagent_fork
+        backgroundMode: continuable
+
+    # 生存模式把产品型子代理视为「村民交易」：默认关闭，需要时复制本 preset
+    # 再取消对应行的 disabled 即可开启。
+    - id: tool-subagent-codex
+      name: '@deepseek-ai/dsh-tool-subagent'
+      disabled: true
+      config:
+        provider: codex
+        toolName: subagent_codex
+        enableRunInBackground: false
+        maxDepth: provider-managed
+
+    - id: tool-subagent-claude-code
+      name: '@deepseek-ai/dsh-tool-subagent'
+      disabled: true
+      config:
+        provider: claude-code
+        toolName: subagent_claude_code
+        enableRunInBackground: false
+        maxDepth: provider-managed
+
+    - id: workflow-worker-thread
+      name: '@deepseek-ai/dsh-workflow-worker-thread'
+      config:
+        provider: spawn
+
+    - id: tool-workflow
+      name: '@deepseek-ai/dsh-tool-workflow'
+
+    - id: tool-ralph
+      name: '@deepseek-ai/dsh-tool-ralph'
+      config:
+        subagentProvider: spawn
+        maxRounds: 64
+
+# ── remaining model-facing rows ─────────────────────────────────────────────
+
+- id: tool-ask-user
+  name: '@deepseek-ai/dsh-tool-ask-user'
+
+- id: tool-todo
+  name: '@deepseek-ai/dsh-tool-todo'
+  config:
+    allowParallelInProgress: true
+
+# 生存模式是离线模式：web 工具整体禁用。所有知识都必须从代码库中挖掘。
+# （保留行本身是为了让模式切换不改变工具目录结构——启用它只需把 disabled
+# 改为 false，其余配置与标准模式一致。）
+- id: tool-web
+  name: '@deepseek-ai/dsh-tool-web'
+  disabled: true
+  config:
+    fetch: false
+    searchTimeoutMs: 60000
